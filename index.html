@@ -10,13 +10,199 @@
   <body class="">
     <div id="ashjs"></div>
 
-    <!-- JavaScript file -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
-
     <!-- <script src="./script.js" type="module"></script> -->
     <script>
+      async function indexRoute(render, store) {
+        return [
+          header(),
+          {
+            div: [
+              {
+                input: [],
+                type: "text",
+                placeholder: "Search sentences...",
+                class:
+                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                oninput: (e) => {
+                  const searchText = e.target.value;
+
+                  if (!searchText) {
+                    store.filteredData = null;
+                  } else {
+                    const filteredData = store.data.filter(
+                      (sentence) =>
+                        sentence.native
+                          .toLowerCase()
+                          .includes(searchText.toLowerCase()) ||
+                        sentence.english
+                          .toLowerCase()
+                          .includes(searchText.toLowerCase()) ||
+                        sentence.phonetic
+                          .toLowerCase()
+                          .includes(searchText.toLowerCase())
+                    );
+                    store.filteredData = filteredData;
+                  }
+
+                  render("sentences");
+                },
+              },
+              {
+                div: (store.filteredData || store.data).map((sentence) =>
+                  sentenceCard(
+                    sentence.native,
+                    sentence.phonetic,
+                    sentence.english
+                  )
+                ),
+                id: "sentences",
+              },
+            ],
+            class: "p-4",
+          },
+          {
+            div: [
+              {
+                button: "Add Sentence",
+                class: "flex-auto border h-10 rounded-lg mr-4",
+                onclick: () => {
+                  window.location.hash = "#add";
+                },
+              },
+              {
+                button: "Practice",
+                class: "flex-auto bg-black text-white h-10 rounded-lg",
+              },
+            ],
+            class: "fixed bottom-0 w-full bg-white p-4 border flex",
+          },
+        ];
+      }
+
+      async function addRoute(render, store) {
+        return [
+          header(),
+          {
+            div: [
+              {
+                input: [],
+                type: "text",
+                placeholder: "Native",
+                class:
+                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                oninput: (e) => {
+                  render("add-button");
+                },
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "Phonetic",
+                class:
+                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                oninput: (e) => {
+                  render("add-button");
+                },
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "English",
+                class:
+                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                oninput: (e) => {
+                  render("add-button");
+                },
+              },
+              {
+                button: "Add",
+                id: "add-button",
+                class:
+                  "w-full mt-2 bg-black text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
+                ...(isAddButtonDisabled() ? { disabled: "" } : {}),
+                onclick: () => {
+                  console.log("Adding sentence");
+                  const native = document.querySelector(
+                    'input[placeholder="Native"]'
+                  ).value;
+                  const phonetic = document.querySelector(
+                    'input[placeholder="Phonetic"]'
+                  ).value;
+                  const english = document.querySelector(
+                    'input[placeholder="English"]'
+                  ).value;
+
+                  store.data.push({
+                    id: store.data.length + 1,
+                    native,
+                    phonetic,
+                    english,
+                  });
+
+                  window.location.hash = "";
+                },
+              },
+            ],
+            class: "p-4",
+          },
+        ];
+      }
+
+      function isAddButtonDisabled() {
+        const native = document.querySelector(
+          'input[placeholder="Native"]'
+        )?.value;
+        const phonetic = document.querySelector(
+          'input[placeholder="Phonetic"]'
+        )?.value;
+        const english = document.querySelector(
+          'input[placeholder="English"]'
+        )?.value;
+
+        console.log({
+          native,
+          phonetic,
+          english,
+          result: !native || !phonetic || !english,
+        });
+
+        return !native || !phonetic || !english;
+      }
+
+      function header() {
+        return {
+          div: [{ h1: "Phonetic", class: "text-xl font-bold" }],
+          class: "bg-black text-white p-4 cursor-pointer",
+          onclick: () => {
+            window.location.hash = "";
+          },
+        };
+      }
+
+      function sentenceCard(native, phonetic, english) {
+        return {
+          div: [
+            {
+              p: native,
+              class: "text-lg font-bold",
+            },
+            {
+              p: phonetic,
+              class: "text-sm text-muted-foreground",
+            },
+            {
+              p: english,
+              class: "text-sm",
+            },
+          ],
+          class:
+            "mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer",
+        };
+      }
+      /**
+       * ash.js helper functions
+       */
       function extractPath(hash) {
-        // ASHJS
         // Check if the string is not empty and starts with a hash
         if (hash && hash.startsWith("#")) {
           // Split the string at the question mark
@@ -45,14 +231,35 @@
         return { currentPath, paramsObject };
       }
 
-      class Ash {
-        data = [];
-        routes = {};
+      function findInTree(tree, id) {
+        for (const element of tree) {
+          if (element.id === id) {
+            return element;
+          }
 
-        constructor(routes) {
+          if (element.div && Array.isArray(element.div)) {
+            const foundElement = findInTree(element.div, id);
+            if (foundElement) {
+              return foundElement;
+            }
+          }
+        }
+
+        return null;
+      }
+
+      /**
+       * ash.js implementation
+       */
+      class Ash {
+        routes = {};
+        store = {};
+
+        constructor(routes, store) {
           this.render = this.render.bind(this);
 
           this.routes = routes;
+          this.store = store;
 
           this.render();
 
@@ -62,26 +269,24 @@
         }
 
         async render(id) {
-          // Replace the current html element by id with the new one
+          const { currentPath, paramsObject } = getUrlInformation();
+          const tree = await this.routes[currentPath](this.render, this.store);
+
           if (id) {
-            const existing = document.getElementById(id);
-            if (existing) {
-              const newElement = this.createNode(
-                this.routes[""][1].div.find(
-                  (element) => element.id === id
-                )
-              );
-              existing.replaceWith(newElement);
+            const newElement = findInTree(tree, id);
+            if (newElement) {
+              const node = this.createNode(newElement);
+              if (node) {
+                document.getElementById(id).replaceWith(node);
+              }
             }
+
             return;
           }
 
-          const { currentPath, paramsObject } = getUrlInformation();
-          this.data = await this.routes[currentPath](this.render, paramsObject);
-
           document.getElementById("ashjs").innerHTML = "";
 
-          this.data.forEach((element) => {
+          tree.forEach((element) => {
             const node = this.createNode(element);
             if (node) {
               document.getElementById("ashjs").appendChild(node);
@@ -126,7 +331,12 @@
         }
       }
 
-      const globalStore = {
+      const routes = {
+        "": indexRoute,
+        add: addRoute,
+      };
+
+      const ash = new Ash(routes, {
         data: [
           {
             id: 1,
@@ -142,104 +352,7 @@
           },
         ],
         filteredData: null,
-      };
-
-      async function indexRoute(render) {
-        return [
-          {
-            div: [{ h1: "Phonetic", class: "text-xl font-bold" }],
-            class: "bg-black text-white p-4",
-          },
-          {
-            div: [
-              {
-                input: [],
-                type: "text",
-                placeholder: "Search sentences...",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                oninput: (e) => {
-                  const searchText = e.target.value;
-                  console.log(searchText);
-
-                  if (!searchText) {
-                    globalStore.filteredData = null;
-                  } else {
-                    const filteredData = globalStore.data.filter(
-                      (sentence) =>
-                        sentence.native
-                          .toLowerCase()
-                          .includes(searchText.toLowerCase()) ||
-                        sentence.english
-                          .toLowerCase()
-                          .includes(searchText.toLowerCase()) ||
-                        sentence.phonetic
-                          .toLowerCase()
-                          .includes(searchText.toLowerCase())
-                    );
-                    globalStore.filteredData = filteredData;
-                  }
-
-                  render("sentences");
-                },
-              },
-              {
-                div: (globalStore.filteredData || globalStore.data).map(
-                  (sentence) =>
-                    sentenceCard(
-                      sentence.native,
-                      sentence.phonetic,
-                      sentence.english
-                    )
-                ),
-                id: "sentences",
-              },
-            ],
-            class: "p-4",
-          },
-          {
-            div: [
-              {
-                button: "Add Sentence",
-                class: "flex-auto border h-10 rounded-lg mr-4",
-              },
-              {
-                button: "Practice",
-                class: "flex-auto bg-black text-white h-10 rounded-lg",
-              },
-            ],
-            // should be at the bottom of the page
-            class: "fixed bottom-0 w-full bg-white p-4 border flex",
-          },
-        ];
-      }
-
-      function sentenceCard(native, phonetic, english) {
-        return {
-          div: [
-            {
-              p: native,
-              class: "text-lg font-bold",
-            },
-            {
-              p: phonetic,
-              class: "text-sm text-muted-foreground",
-            },
-            {
-              p: english,
-              class: "text-sm",
-            },
-          ],
-          class:
-            "mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer",
-        };
-      }
-
-      const routes = {
-        "": indexRoute,
-      };
-
-      const ash = new Ash(routes);
+      });
     </script>
   </body>
 </html>
