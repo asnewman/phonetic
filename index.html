@@ -72,6 +72,9 @@
               {
                 button: "Practice",
                 class: "flex-auto bg-black text-white h-10 rounded-lg",
+                onclick: () => {
+                  window.location.hash = "#practice";
+                },
               },
             ],
             class: "fixed bottom-0 w-full bg-white p-4 border flex",
@@ -84,6 +87,17 @@
           header(),
           {
             div: [
+            {
+                input: [],
+                type: "text",
+                placeholder: "English",
+                class:
+                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                oninput: (e) => {
+                  render("add-button");
+                  render("auto-generate-button");
+                },
+              },
               {
                 input: [],
                 type: "text",
@@ -105,13 +119,39 @@
                 },
               },
               {
-                input: [],
-                type: "text",
-                placeholder: "English",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                oninput: (e) => {
-                  render("add-button");
+                button: "Auto-generate",
+                id: "auto-generate-button",
+                class: "w-full mt-2 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed",
+                ...(isAutoGenerateButtonDisabled() || store.generating ? { disabled: "" } : {}),
+                onclick: async () => {
+                  const englishInput = document.querySelector('input[placeholder="English"]');
+                  const nativeInput = document.querySelector('input[placeholder="Native"]');
+                  const phoneticInput = document.querySelector('input[placeholder="Phonetic"]');
+
+                  if (englishInput.value) {
+                    try { 
+                      store.generating = true
+                      render("auto-generate-button");
+                      const response = await fetch("https://asnewman-translate.web.val.run", {
+                        method: "POST",
+                        body: JSON.stringify({ english: englishInput.value }),
+                      });
+
+                      if (response.ok) {
+                        const data = await response.json();
+                        nativeInput.value = data.hebrew;
+                        phoneticInput.value = data.phonetic;
+                        render("add-button");
+                      } else {
+                        console.error("Error generating translation");
+                      }
+                    } catch (error) {
+                      console.error("Error:", error);
+                    } finally {
+                      store.generating = false;
+                      render("auto-generate-button");
+                    }
+                  }
                 },
               },
               {
@@ -146,6 +186,60 @@
             class: "p-4",
           },
         ];
+      }
+
+      async function practiceRoute(render, store) {
+        const randomSentence = store.data[Math.floor(Math.random() * store.data.length)];
+        return [
+          header(),
+          {
+            div: [
+              {
+                p: "Translate this sentence:",
+                class: "text-lg font-bold mb-4",
+              },
+              {
+                p: randomSentence.english,
+                class: "text-xl mb-4",
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "Type the translation...",
+                class: "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                oninput: (e) => render("check-button"),
+              },
+              {
+                button: "Check",
+                id: "check-button",
+                class: "w-full mt-4 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
+                onclick: () => {
+                  const userInput = document.querySelector('input[placeholder="Type the translation..."]').value.trim().toLowerCase();
+                  const correctAnswer = randomSentence.phonetic.toLowerCase();
+                  
+                  if (userInput === correctAnswer) {
+                    alert("Correct! Well done!");
+                  } else {
+                    alert(`Incorrect. The correct answer is: ${randomSentence.phonetic}`);
+                  }
+                  
+                  // Refresh the practice page with a new sentence
+                  window.location.hash = "#practice";
+                },
+              },
+            ],
+            class: "p-4",
+          },
+        ];
+      }
+
+      
+
+      function isAutoGenerateButtonDisabled() {
+        const english = document.querySelector(
+          'input[placeholder="English"]'
+        )?.value;
+        return !english;
       }
 
       function isAddButtonDisabled() {
@@ -334,6 +428,7 @@
       const routes = {
         "": indexRoute,
         add: addRoute,
+        practice: practiceRoute,
       };
 
       const ash = new Ash(routes, {
@@ -352,6 +447,7 @@
           },
         ],
         filteredData: null,
+        generating: false,
       });
     </script>
   </body>
