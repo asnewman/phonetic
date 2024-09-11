@@ -14,7 +14,7 @@
     <script>
       async function indexRoute(render, store) {
         return [
-          header(),
+          header(store),
           {
             div: [
               {
@@ -84,7 +84,7 @@
 
       async function addRoute(render, store) {
         return [
-          header(),
+          header(store),
           {
             div: [
             {
@@ -189,9 +189,11 @@
       }
 
       async function practiceRoute(render, store) {
-        const randomSentence = store.data[Math.floor(Math.random() * store.data.length)];
+        if (store.randomSentence === null) {
+          store.randomSentence = getRandomSentence(store);
+        }
         return [
-          header(),
+          header(store),
           {
             div: [
               {
@@ -199,7 +201,7 @@
                 class: "text-lg font-bold mb-4",
               },
               {
-                p: randomSentence.english,
+                p: store.randomSentence.english,
                 class: "text-xl mb-4",
               },
               {
@@ -215,17 +217,27 @@
                 class: "w-full mt-4 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
                 onclick: () => {
                   const userInput = document.querySelector('input[placeholder="Type the translation..."]').value.trim().toLowerCase();
-                  const correctAnswer = randomSentence.phonetic.toLowerCase();
+                  const correctAnswer = store.randomSentence.phonetic.toLowerCase();
                   
                   if (userInput === correctAnswer) {
-                    alert("Correct! Well done!");
+                    showToast(store, "Correct! Well done!", "success", render);
                   } else {
-                    alert(`Incorrect. The correct answer is: ${randomSentence.phonetic}`);
+                    showToast(store, `Incorrect. The correct answer is: ${store.randomSentence.phonetic}`, "error", render);
                   }
                   
-                  // Refresh the practice page with a new sentence
-                  window.location.hash = "#practice";
+                  store.randomSentence = getRandomSentence(store);
+                  render()
                 },
+              },
+              {
+                div: [
+                  (store.toast.message ? {
+                    p: store.toast.message,
+                    class: store.toast.class
+                  } : {div: ""})
+                ],
+                id: "toast-container",
+                class: "fixed top-4 right-4 z-50",
               },
             ],
             class: "p-4",
@@ -234,6 +246,23 @@
       }
 
       
+      /**
+       * Retrieves a random sentence from the store's data array.
+       * Ensures that the new random sentence is different from the current one.
+       * 
+       * @param {Object} store - The store object containing the data array.
+       * @returns {Object} A randomly selected sentence object.
+       */
+      function getRandomSentence(store) {
+        const randomIndex = Math.floor(Math.random() * store.data.length);
+        let newRandomSentence = store.data[randomIndex];
+
+        if (store.randomSentence && newRandomSentence === store.randomSentence) {
+          newRandomSentence = getRandomSentence(store)
+        }
+
+        return newRandomSentence
+      }
 
       function isAutoGenerateButtonDisabled() {
         const english = document.querySelector(
@@ -263,12 +292,13 @@
         return !native || !phonetic || !english;
       }
 
-      function header() {
+      function header(store) {
         return {
           div: [{ h1: "Phonetic", class: "text-xl font-bold" }],
           class: "bg-black text-white p-4 cursor-pointer",
           onclick: () => {
             window.location.hash = "";
+            store.randomSentence = null
           },
         };
       }
@@ -293,6 +323,30 @@
             "mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer",
         };
       }
+
+      /**
+       * Displays a toast notification and automatically hides it after a set duration.
+       * 
+       * @param {Object} store - The application's store object.
+       * @param {string} message - The message to display in the toast.
+       * @param {string} type - The type of toast, either "success" or "error".
+       * @param {Function} render - The function to call to re-render the component.
+       */
+      function showToast(store, message, type, render) {
+        store.toast.message = message;
+        store.toast.class = `p-4 rounded-lg shadow-lg ${type === "success" ? "bg-green-500" : "bg-red-500"} text-white mb-2`;
+        
+        setTimeout(() => {
+          store.toast.class = "opacity-0 transition-opacity duration-300";
+          render("toast-container")
+          setTimeout(() => {
+            store.toast.message = null;
+            store.toast.class = null
+            render("toast-container")
+          }, 300);
+        }, 5000);
+      }
+
       /**
        * ash.js helper functions
        */
@@ -365,6 +419,8 @@
         async render(id) {
           const { currentPath, paramsObject } = getUrlInformation();
           const tree = await this.routes[currentPath](this.render, this.store);
+
+          console.trace("rendering", id)
 
           if (id) {
             const newElement = findInTree(tree, id);
@@ -448,6 +504,11 @@
         ],
         filteredData: null,
         generating: false,
+        randomSentence: null,
+        toast: {
+          message: null,
+          class: null,
+        }
       });
     </script>
   </body>
