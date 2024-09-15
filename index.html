@@ -161,7 +161,6 @@
                   "w-full mt-2 bg-black text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
                 ...(isAddButtonDisabled() ? { disabled: "" } : {}),
                 onclick: () => {
-                  console.log("Adding sentence");
                   const native = document.querySelector(
                     'input[placeholder="Native"]'
                   ).value;
@@ -177,6 +176,8 @@
                     native,
                     phonetic,
                     english,
+                    correctAttempts: 0,
+                    incorrectAttempts: 0
                   });
 
                   window.location.hash = "";
@@ -192,6 +193,12 @@
         if (store.randomSentence === null) {
           store.randomSentence = getRandomSentence(store);
         }
+
+        const totalAttempts = store.randomSentence.correctAttempts + store.randomSentence.incorrectAttempts;
+        const score = totalAttempts > 0
+          ? Math.round((store.randomSentence.correctAttempts / totalAttempts) * 100)
+          : 0;
+
         return [
           header(store),
           {
@@ -220,13 +227,18 @@
                   const correctAnswer = store.randomSentence.phonetic.toLowerCase();
                   
                   if (userInput === correctAnswer) {
+                    store.randomSentence.correctAttempts++;
                     showToast(store, "Correct! Well done!", "success", render);
                   } else {
+                    store.randomSentence.incorrectAttempts++;
                     showToast(store, `Incorrect. The correct answer is: ${store.randomSentence.phonetic}`, "error", render);
                   }
                   
-                  store.randomSentence = getRandomSentence(store);
-                  render()
+                  render();
+                  setTimeout(() => {
+                    store.randomSentence = getRandomSentence(store);
+                    render();
+                  }, 2000);
                 },
               },
               {
@@ -238,6 +250,23 @@
                 ],
                 id: "toast-container",
                 class: "fixed top-4 right-4 z-50",
+              },
+              {
+                div: [
+                  {
+                    p: `Score for this sentence: ${score}%`,
+                    class: "text-blue-500 font-bold text-lg",
+                  },
+                  {
+                    p: `Correct attempts: ${store.randomSentence.correctAttempts}`,
+                    class: "text-green-500 font-bold",
+                  },
+                  {
+                    p: `Incorrect attempts: ${store.randomSentence.incorrectAttempts}`,
+                    class: "text-red-500 font-bold",
+                  },
+                ],
+                class: "mt-4 flex flex-col items-center space-y-2",
               },
             ],
             class: "p-4",
@@ -257,11 +286,11 @@
         const randomIndex = Math.floor(Math.random() * store.data.length);
         let newRandomSentence = store.data[randomIndex];
 
-        if (store.randomSentence && newRandomSentence === store.randomSentence) {
-          newRandomSentence = getRandomSentence(store)
+        if (store.randomSentence && newRandomSentence.id === store.randomSentence.id) {
+          return getRandomSentence(store);
         }
 
-        return newRandomSentence
+        return newRandomSentence;
       }
 
       function isAutoGenerateButtonDisabled() {
@@ -281,13 +310,6 @@
         const english = document.querySelector(
           'input[placeholder="English"]'
         )?.value;
-
-        console.log({
-          native,
-          phonetic,
-          english,
-          result: !native || !phonetic || !english,
-        });
 
         return !native || !phonetic || !english;
       }
@@ -420,8 +442,6 @@
           const { currentPath, paramsObject } = getUrlInformation();
           const tree = await this.routes[currentPath](this.render, this.store);
 
-          console.trace("rendering", id)
-
           if (id) {
             const newElement = findInTree(tree, id);
             if (newElement) {
@@ -494,12 +514,16 @@
             native: "こんにちは",
             phonetic: "konnichiwa",
             english: "Hello",
+            correctAttempts: 0,
+            incorrectAttempts: 0
           },
           {
             id: 2,
             native: "ありがとう",
             phonetic: "Arigatou",
             english: "Thank you",
+            correctAttempts: 0,
+            incorrectAttempts: 0
           },
         ],
         filteredData: null,
@@ -512,4 +536,4 @@
       });
     </script>
   </body>
-</html>
+</ht
