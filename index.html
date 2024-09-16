@@ -12,11 +12,128 @@
 
     <!-- <script src="./script.js" type="module"></script> -->
     <script>
+      function getData(useDatabase) {
+        if (useDatabase) {
+          const baseId = localStorage.getItem('airtableBaseId');
+          const tableId = localStorage.getItem('airtableTableId');
+          const accessToken = localStorage.getItem('airtableAccessToken');
+
+          if (!baseId || !tableId || !accessToken) {
+            console.error('Airtable credentials not found in localStorage');
+            return Promise.resolve([]);
+          }
+
+          return fetch(`https://api.airtable.com/v0/${baseId}/${tableId}`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to fetch data from Airtable');
+            }
+            return response.json();
+          })
+          .then(data => {
+            return data.records.map(record => ({
+              id: record.id,
+              native: record.fields.native,
+              phonetic: record.fields.phonetic,
+              english: record.fields.english,
+              correctAttempts: record.fields.correctAttempts || 0,
+              incorrectAttempts: record.fields.incorrectAttempts || 0
+            }));
+          })
+          .catch(error => {
+            console.error('Error fetching data from Airtable:', error);
+            return [];
+          });
+        } else {
+          return Promise.resolve([
+            {
+              id: 1,
+              native: "こんにちは",
+              phonetic: "konnichiwa",
+              english: "Hello",
+              correctAttempts: 0,
+              incorrectAttempts: 0
+            },
+            {
+              id: 2,
+              native: "ありがとう",
+              phonetic: "Arigatou",
+              english: "Thank you",
+              correctAttempts: 0,
+              incorrectAttempts: 0
+            },
+          ]);
+        }
+      }
+
+      function writeData(record, useDatabase) {
+        if (useDatabase) {
+          const baseId = localStorage.getItem('airtableBaseId');
+          const tableId = localStorage.getItem('airtableTableId');
+          const accessToken = localStorage.getItem('airtableAccessToken');
+
+          if (!baseId || !tableId || !accessToken) {
+            console.error('Airtable credentials not found in localStorage');
+            return Promise.reject('Airtable credentials not found');
+          }
+
+          return fetch(`https://api.airtable.com/v0/${baseId}/${tableId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fields: {
+                native: record.native,
+                phonetic: record.phonetic,
+                english: record.english,
+                correctAttempts: record.correctAttempts || 0,
+                incorrectAttempts: record.incorrectAttempts || 0
+              }
+            })
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to write data to Airtable');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log('Data successfully written to Airtable:', data);
+            return data;
+          })
+          .catch(error => {
+            console.error('Error writing data to Airtable:', error);
+            throw error;
+          });
+        } else {
+          // If not using database, just return the record as if it was successfully added
+          return Promise.resolve({
+            id: Date.now(), // Generate a temporary ID
+            fields: record
+          });
+        }
+      }
+
+      
+
       async function indexRoute(render, store) {
         return [
           header(store),
           {
             div: [
+            {
+                button: "Configuration",
+                class: "w-full border h-10 rounded-lg mb-2",
+                onclick: () => {
+                  window.location.hash = "#config";
+                },
+              },
               {
                 input: [],
                 type: "text",
@@ -62,22 +179,22 @@
           },
           {
             div: [
-              {
-                button: "Add Sentence",
-                class: "flex-auto border h-10 rounded-lg mr-4",
-                onclick: () => {
-                  window.location.hash = "#add";
-                },
-              },
-              {
-                button: "Practice",
-                class: "flex-auto bg-black text-white h-10 rounded-lg",
-                onclick: () => {
-                  window.location.hash = "#practice";
-                },
-              },
+            {
+                    button: "Add Sentence",
+                    class: "flex-auto border h-10 rounded-lg mr-4",
+                    onclick: () => {
+                      window.location.hash = "#add";
+                    },
+                  },
+                  {
+                    button: "Practice",
+                    class: "flex-auto bg-black text-white h-10 rounded-lg",
+                    onclick: () => {
+                      window.location.hash = "#practice";
+                    },
+                  },
             ],
-            class: "fixed bottom-0 w-full bg-white p-4 border flex",
+            class: "flex fixed bottom-0 w-full bg-white p-4 border",
           },
         ];
       }
@@ -134,12 +251,15 @@
                       render("auto-generate-button");
                       const response = await fetch("https://asnewman-translate.web.val.run", {
                         method: "POST",
-                        body: JSON.stringify({ english: englishInput.value }),
+                        body: JSON.stringify({ 
+                          language: localStorage.getItem('language'),
+                          english: englishInput.value 
+                        }),
                       });
 
                       if (response.ok) {
                         const data = await response.json();
-                        nativeInput.value = data.hebrew;
+                        nativeInput.value = data.native;
                         phoneticInput.value = data.phonetic;
                         render("add-button");
                       } else {
@@ -171,16 +291,24 @@
                     'input[placeholder="English"]'
                   ).value;
 
-                  store.data.push({
-                    id: store.data.length + 1,
+                  writeData({
                     native,
                     phonetic,
                     english,
                     correctAttempts: 0,
                     incorrectAttempts: 0
+                  }, true) // Set to true to use the database
+                  .then(newRecord => {
+                    store.data.push({
+                      id: newRecord.id,
+                      ...newRecord.fields
+                    });
+                    window.location.hash = "";
+                  })
+                  .catch(error => {
+                    console.error('Failed to add new sentence:', error);
+                    // Handle the error (e.g., show an error message to the user)
                   });
-
-                  window.location.hash = "";
                 },
               },
             ],
@@ -267,6 +395,80 @@
                   },
                 ],
                 class: "mt-4 flex flex-col items-center space-y-2",
+              },
+            ],
+            class: "p-4",
+          },
+        ];
+      }
+
+      async function configRoute(render, store) {
+        return [
+          header(store),
+          {
+            div: [
+              {
+                h1: "Language",
+                class: "text-lg font-bold mb-2",
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "Language",
+                value: localStorage.getItem('language') || "",
+                class: "w-full mt-2 mb-4 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                id: "language",
+              },
+              {
+                h1: "Configure Airtable Connection",
+                class: "text-lg font-bold mb-2",
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "Airtable Base ID",
+                value: localStorage.getItem('airtableBaseId') || "",
+                class: "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                id: "baseId",
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "Airtable Table ID",
+                value: localStorage.getItem('airtableTableId') || "",
+                class: "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                id: "tableId",
+              },
+              {
+                input: [],
+                type: "text",
+                placeholder: "Airtable Access Token",
+                value: localStorage.getItem('airtableAccessToken') || "",
+                class: "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                id: "accessToken",
+              },
+              {
+                button: "Save Configuration",
+                class: "w-full mt-4 bg-black text-white p-3 rounded-lg shadow cursor-pointer",
+                onclick: () => {
+                  const language = document.getElementById('language').value;
+                  const baseId = document.getElementById('baseId').value;
+                  const tableId = document.getElementById('tableId').value;
+                  const accessToken = document.getElementById('accessToken').value;
+
+                  localStorage.setItem('language', language);
+                  localStorage.setItem('airtableBaseId', baseId);
+                  localStorage.setItem('airtableTableId', tableId);
+                  localStorage.setItem('airtableAccessToken', accessToken);
+
+                  showToast(store, "Configuration saved successfully!", "success", render);
+                  
+                  // Reload data from Airtable
+                  getData(true).then((data) => {
+                    store.data = data;
+                    window.location.hash = "";
+                  });
+                },
               },
             ],
             class: "p-4",
@@ -505,34 +707,20 @@
         "": indexRoute,
         add: addRoute,
         practice: practiceRoute,
+        config: configRoute,
       };
 
-      const ash = new Ash(routes, {
-        data: [
-          {
-            id: 1,
-            native: "こんにちは",
-            phonetic: "konnichiwa",
-            english: "Hello",
-            correctAttempts: 0,
-            incorrectAttempts: 0
-          },
-          {
-            id: 2,
-            native: "ありがとう",
-            phonetic: "Arigatou",
-            english: "Thank you",
-            correctAttempts: 0,
-            incorrectAttempts: 0
-          },
-        ],
-        filteredData: null,
-        generating: false,
-        randomSentence: null,
-        toast: {
-          message: null,
-          class: null,
-        }
+      getData(true).then((data) => {
+        const ash = new Ash(routes, {
+          data: data,
+          filteredData: null,
+          generating: false,
+          randomSentence: null,
+          toast: {
+            message: null,
+            class: null,
+          }
+        });
       });
     </script>
   </body>
