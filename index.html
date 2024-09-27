@@ -406,6 +406,18 @@
           header(store),
           {
             div: [
+              store.toast.message
+                ? {
+                  p: store.toast.message,
+                  class: store.toast.class,
+                }
+                : { div: "" },
+            ],
+            id: "toast-container",
+            class: "fixed top-4 right-4 z-50",
+          },
+          {
+            div: [
               {
                 h1: "Language",
                 class: "text-lg font-bold mb-2",
@@ -570,6 +582,7 @@
         store.toast.class = `p-4 rounded-lg shadow-lg ${
           type === "success" ? "bg-green-500" : "bg-red-500"
         } text-white mb-2`;
+        render("toast-container");
 
         setTimeout(() => {
           store.toast.class = "opacity-0 transition-opacity duration-300";
