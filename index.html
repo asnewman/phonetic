@@ -352,6 +352,7 @@
               {
                 button: store.dontKnowHintVisible ? "Next" : "Check",
                 id: "check-button",
+                ...(store.loadingNextPracticeSentence ? { disabled: "" } : {}),
                 class:
                   "w-full mt-4 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
                 onclick: () => {
@@ -408,9 +409,9 @@
             div: [
               store.toast.message
                 ? {
-                  p: store.toast.message,
-                  class: store.toast.class,
-                }
+                    p: store.toast.message,
+                    class: store.toast.class,
+                  }
                 : { div: "" },
             ],
             id: "toast-container",
@@ -707,6 +708,8 @@
           });
         },
         check: async (data, render) => {
+          store.loadingNextPracticeSentence = true;
+          render("check-button");
           if (store.dontKnowHintVisible) {
             store.dontKnowHintVisible = false;
             store.hintProgress = {
@@ -750,10 +753,12 @@
           render();
           if (store.dontKnowHintVisible) {
             store.randomSentence = getRandomSentence(store);
+            store.loadingNextPracticeSentence = false;
             render();
           } else {
             setTimeout(() => {
               store.randomSentence = getRandomSentence(store);
+              store.loadingNextPracticeSentence = false;
               render();
             }, 2000);
           }
@@ -803,11 +808,6 @@
           const hint = store.randomSentence.phonetic.toLowerCase();
           const inputText = input.value.trim().toLowerCase();
 
-          console.log({
-            inputText,
-            hint,
-          });
-
           if (inputText === hint) {
             store.hintProgress = {
               status: "correct",
@@ -853,6 +853,7 @@
             status: null,
             to: null,
           },
+          loadingNextPracticeSentence: false,
         };
         const ash = new window.Ash(routes, events);
       });
