@@ -758,7 +758,7 @@
             }, 2000);
           }
         },
-        "save-config": (data, render) => {
+        "save-config": (data, render, emit) => {
           localStorage.setItem(
             "language",
             document.getElementById("language").value
@@ -781,6 +781,7 @@
             "success",
             render
           );
+          emit("refresh-data");
         },
         "dont-know": (data, render) => {
           store.dontKnowHintVisible = true;
@@ -826,6 +827,12 @@
           }
 
           render("dont-know-hint");
+        },
+        "refresh-data": (data, render) => {
+          getData(true).then((data) => {
+            store.data = data;
+            render();
+          });
         },
       };
 
