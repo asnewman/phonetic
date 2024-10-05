@@ -83,8 +83,10 @@
             return Promise.reject("Airtable credentials not found");
           }
 
-          return fetch(`https://api.airtable.com/v0/${baseId}/${tableId}`, {
-            method: "POST",
+          const url = record.id ? `https://api.airtable.com/v0/${baseId}/${tableId}/${record.id}` : `https://api.airtable.com/v0/${baseId}/${tableId}`;
+
+          return fetch(url, {
+            method: record.id ? "PATCH" : "POST",
             headers: {
               Authorization: `Bearer ${accessToken}`,
               "Content-Type": "application/json",
@@ -220,7 +222,12 @@
         ];
       }
 
-      async function addRoute(emit) {
+      async function addEditUi(emit, {id}) {
+        let sentence = null
+        if (id) {
+          sentence = store.data.find(item => item.id === id);
+        }
+
         return [
           header(store),
           {
@@ -229,6 +236,7 @@
                 input: [],
                 type: "text",
                 placeholder: "English",
+                value: sentence?.english ?? "",
                 class:
                   "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
                 oninput: (e) => {
@@ -239,6 +247,7 @@
                 input: [],
                 type: "text",
                 placeholder: "Native",
+                value: sentence?.native ?? "",
                 class:
                   "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
                 oninput: (e) => {
@@ -251,6 +260,7 @@
                 placeholder: "Phonetic",
                 class:
                   "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
+                value: sentence?.phonetic ?? "",
                 oninput: (e) => {
                   emit("render-ids", ["add-button"]);
                 },
@@ -268,27 +278,27 @@
                 },
               },
               {
-                button: "Add",
+                button: id ? "Update" : "Add",
                 id: "add-button",
                 class:
                   "w-full mt-2 bg-black text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
-                ...(isAddButtonDisabled() ? { disabled: "" } : {}),
+                ...(isAddButtonDisabled() && !id ? { disabled: "" } : {}),
                 onclick: () => {
-                  emit("add");
+                  emit("upsert-sentence", {id});
                 },
               },
             ],
             class: "p-4",
           },
-        ];
+        ] 
+      }
+
+      async function addRoute(emit) {
+        return addEditUi(emit, {isAutoGenerateButtonDisabled, isAddButtonDisabled});
       }
 
       async function editRoute(emit, {urlInformation}) {
-        return [
-          {
-            div: JSON.stringify(urlInformation)
-          }
-        ]
+        return addEditUi(emit, { id: urlInformation.urlParams.id });
       }
 
       async function practiceRoute(emit) {
@@ -685,7 +695,7 @@
             }
           }
         },
-        add: (data, render) => {
+        "upsert-sentence": async (data, render) => {
           const native = document.querySelector(
             'input[placeholder="Native"]'
           ).value;
@@ -696,27 +706,58 @@
             'input[placeholder="English"]'
           ).value;
 
-          writeData(
-            {
-              native,
-              phonetic,
-              english,
-              correctAttempts: 0,
-              incorrectAttempts: 0,
-            },
-            true
-          ) // Set to true to use the database
-            .then((newRecord) => {
-              store.data.push({
-                id: newRecord.id,
-                ...newRecord.fields,
+          if (data.id) {
+            const existingSentence = store.data.find(item => item.id === data.id);
+
+            writeData(
+              {
+                id: data.id,
+                native,
+                phonetic,
+                english,
+                correctAttempts: existingSentence.correctAttempts || 0,
+                incorrectAttempts: existingSentence.incorrectAttempts || 0,
+              },
+              true
+            ) // Set to true to use the database
+              .then((updatedRecord) => {
+                const index = store.data.findIndex(item => item.id === data.id);
+                if (index !== -1) {
+                  store.data[index] = {
+                    ...store.data[index],
+                    ...updatedRecord.fields,
+                  };
+                }
+                window.location.hash = "";
+              })
+              .catch((error) => {
+                console.error("Failed to edit  sentence:", error);
               });
-              window.location.hash = "";
-            })
-            .catch((error) => {
-              console.error("Failed to add new sentence:", error);
-              // Handle the error (e.g., show an error message to the user)
-            });
+            
+          }
+          else {
+            writeData(
+              {
+                native,
+                phonetic,
+                english,
+                correctAttempts: 0,
+                incorrectAttempts: 0,
+              },
+              true
+            ) // Set to true to use the database
+              .then((newRecord) => {
+                store.data.push({
+                  id: newRecord.id,
+                  ...newRecord.fields,
+                });
+                window.location.hash = "";
+              })
+              .catch((error) => {
+                console.error("Failed to add new sentence:", error);
+                // Handle the error (e.g., show an error message to the user)
+              });
+          }
         },
         "render-ids": (data, render) => {
           data.forEach((id) => {
