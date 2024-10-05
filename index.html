@@ -6,7 +6,7 @@
     <title>Phonetic</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/gh/asnewman/ashjs@refs/tags/v0.0.1/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/asnewman/ashjs@refs/tags/v0.0.2/index.js"></script>
   </head>
   <body class="">
     <div id="ashjs"></div>
@@ -168,7 +168,7 @@
                 button: "Configuration",
                 class: "w-full border h-10 rounded-lg mb-2",
                 onclick: () => {
-                  emit("go", "config");
+                  emit("go", "/config");
                 },
               },
               {
@@ -184,6 +184,8 @@
               {
                 div: (store.filteredData || store.data).map((sentence) =>
                   sentenceCard(
+                    emit,
+                    sentence.id,
                     sentence.native,
                     sentence.phonetic,
                     sentence.english,
@@ -202,14 +204,14 @@
                 button: "Add Sentence",
                 class: "flex-auto border h-10 rounded-lg mr-4",
                 onclick: () => {
-                  emit("go", "add");
+                  emit("go", "/add");
                 },
               },
               {
                 button: "Practice",
                 class: "flex-auto bg-black text-white h-10 rounded-lg",
                 onclick: () => {
-                  emit("go", "practice");
+                  emit("go", "/practice");
                 },
               },
             ],
@@ -279,6 +281,14 @@
             class: "p-4",
           },
         ];
+      }
+
+      async function editRoute(emit, {urlInformation}) {
+        return [
+          {
+            div: JSON.stringify(urlInformation)
+          }
+        ]
       }
 
       async function practiceRoute(emit) {
@@ -531,6 +541,8 @@
       }
 
       function sentenceCard(
+        emit,
+        id,
         native,
         phonetic,
         english,
@@ -567,6 +579,9 @@
           ],
           class:
             "mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer relative",
+          onclick: () => {
+            emit("go", `/edit/${id}`);
+          }
         };
       }
 
@@ -601,6 +616,7 @@
         "/add": addRoute,
         "/practice": practiceRoute,
         "/config": configRoute,
+        "/edit/:id": editRoute,
       };
 
       const events = {
