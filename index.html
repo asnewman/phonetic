@@ -83,7 +83,9 @@
             return Promise.reject("Airtable credentials not found");
           }
 
-          const url = record.id ? `https://api.airtable.com/v0/${baseId}/${tableId}/${record.id}` : `https://api.airtable.com/v0/${baseId}/${tableId}`;
+          const url = record.id
+            ? `https://api.airtable.com/v0/${baseId}/${tableId}/${record.id}`
+            : `https://api.airtable.com/v0/${baseId}/${tableId}`;
 
           return fetch(url, {
             method: record.id ? "PATCH" : "POST",
@@ -222,10 +224,10 @@
         ];
       }
 
-      async function addEditUi(emit, {id}) {
-        let sentence = null
+      async function addEditUi(emit, { id }) {
+        let sentence = null;
         if (id) {
-          sentence = store.data.find(item => item.id === id);
+          sentence = store.data.find((item) => item.id === id);
         }
 
         return [
@@ -284,20 +286,23 @@
                   "w-full mt-2 bg-black text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
                 ...(isAddButtonDisabled() && !id ? { disabled: "" } : {}),
                 onclick: () => {
-                  emit("upsert-sentence", {id});
+                  emit("upsert-sentence", { id });
                 },
               },
             ],
             class: "p-4",
           },
-        ] 
+        ];
       }
 
       async function addRoute(emit) {
-        return addEditUi(emit, {isAutoGenerateButtonDisabled, isAddButtonDisabled});
+        return addEditUi(emit, {
+          isAutoGenerateButtonDisabled,
+          isAddButtonDisabled,
+        });
       }
 
-      async function editRoute(emit, {urlInformation}) {
+      async function editRoute(emit, { urlInformation }) {
         return addEditUi(emit, { id: urlInformation.urlParams.id });
       }
 
@@ -312,7 +317,9 @@
         const score =
           totalAttempts > 0
             ? Math.round(
-                (store.practiceSession.current.correctAttempts / totalAttempts) * 100
+                (store.practiceSession.current.correctAttempts /
+                  totalAttempts) *
+                  100
               )
             : 0;
 
@@ -329,7 +336,10 @@
         const dontKnowHintP = [];
         if (store.hintProgress.status === "partial") {
           dontKnowHintP.push({
-            span: store.practiceSession.current.phonetic.slice(0, store.hintProgress.to),
+            span: store.practiceSession.current.phonetic.slice(
+              0,
+              store.hintProgress.to
+            ),
             class: "text-yellow-500",
           });
         }
@@ -438,6 +448,10 @@
             class: "fixed top-4 right-4 z-50",
           },
           {
+            div: "Phonetic uses Airtable to store sentences to avoid having to pay for a database and deal with auth. If you want to use Phonetic, please create an Airtable account and table and paste the information below. These values are stored in the browser's local storage so they are not shared and persist between sessions.",
+            class: "p-4 m-2 mb-0 bg-gray-100 rounded-lg",
+          },
+          {
             div: [
               {
                 h1: "Language",
@@ -498,16 +512,16 @@
       }
 
       function startNewPracticeSession(store) {
-        const orderedSentences = store.data.sort(
-          (a, b) => {
-            if (b.correctAttempts === 0 && b.incorrectAttempts === 0) return 1;
-            if (a.correctAttempts === 0 && a.incorrectAttempts === 0) return -1;
+        const orderedSentences = store.data.sort((a, b) => {
+          if (b.correctAttempts === 0 && b.incorrectAttempts === 0) return 1;
+          if (a.correctAttempts === 0 && a.incorrectAttempts === 0) return -1;
 
-            const aScore = a.correctAttempts / (a.correctAttempts + a.incorrectAttempts);
-            const bScore = b.correctAttempts / (b.correctAttempts + b.incorrectAttempts);
-            return aScore - bScore;
-          }
-        );
+          const aScore =
+            a.correctAttempts / (a.correctAttempts + a.incorrectAttempts);
+          const bScore =
+            b.correctAttempts / (b.correctAttempts + b.incorrectAttempts);
+          return aScore - bScore;
+        });
         const current = orderedSentences.shift();
         store.practiceSession = {
           toPractice: orderedSentences,
@@ -591,7 +605,7 @@
             "mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer relative",
           onclick: () => {
             emit("go", `/edit/${id}`);
-          }
+          },
         };
       }
 
@@ -707,7 +721,9 @@
           ).value;
 
           if (data.id) {
-            const existingSentence = store.data.find(item => item.id === data.id);
+            const existingSentence = store.data.find(
+              (item) => item.id === data.id
+            );
 
             writeData(
               {
@@ -721,7 +737,9 @@
               true
             ) // Set to true to use the database
               .then((updatedRecord) => {
-                const index = store.data.findIndex(item => item.id === data.id);
+                const index = store.data.findIndex(
+                  (item) => item.id === data.id
+                );
                 if (index !== -1) {
                   store.data[index] = {
                     ...store.data[index],
@@ -733,9 +751,7 @@
               .catch((error) => {
                 console.error("Failed to edit  sentence:", error);
               });
-            
-          }
-          else {
+          } else {
             writeData(
               {
                 native,
@@ -774,31 +790,40 @@
               from: null,
               to: null,
             };
-            store.practiceSession.toPractice.push(store.practiceSession.current);
-            store.practiceSession.current = store.practiceSession.toPractice.shift();
+            store.practiceSession.toPractice.push(
+              store.practiceSession.current
+            );
+            store.practiceSession.current =
+              store.practiceSession.toPractice.shift();
           } else {
             const userInput = document
               .querySelector('input[placeholder="Type the translation..."]')
               .value.trim()
               .toLowerCase();
-            const correctAnswer = store.practiceSession.current.phonetic.toLowerCase();
+            const correctAnswer =
+              store.practiceSession.current.phonetic.toLowerCase();
 
             if (userInput === correctAnswer) {
               showToast(store, "Correct! Well done!", "success", render);
               await updateRecord(
                 {
                   ...store.practiceSession.current,
-                  correctAttempts: store.practiceSession.current.correctAttempts + 1,
+                  correctAttempts:
+                    store.practiceSession.current.correctAttempts + 1,
                 },
                 true
               );
-              store.practiceSession.practiced.push(store.practiceSession.current);
-              store.practiceSession.current = store.practiceSession.toPractice.shift();
+              store.practiceSession.practiced.push(
+                store.practiceSession.current
+              );
+              store.practiceSession.current =
+                store.practiceSession.toPractice.shift();
             } else {
               await updateRecord(
                 {
                   ...store.practiceSession.current,
-                  incorrectAttempts: store.practiceSession.current.incorrectAttempts + 1,
+                  incorrectAttempts:
+                    store.practiceSession.current.incorrectAttempts + 1,
                 },
                 true
               );
@@ -808,8 +833,11 @@
                 "error",
                 render
               );
-              store.practiceSession.toPractice.push(store.practiceSession.current);
-              store.practiceSession.current = store.practiceSession.toPractice.shift();
+              store.practiceSession.toPractice.push(
+                store.practiceSession.current
+              );
+              store.practiceSession.current =
+                store.practiceSession.toPractice.shift();
             }
           }
 
