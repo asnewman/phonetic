@@ -6,11 +6,11 @@
     <title>Phonetic</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/gh/asnewman/ashjs@latest/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/asnewman/ashjs@v0.0.8/index.js"></script>
+    <!-- <script src="ash.js"></script> -->
   </head>
   <body class="">
     <div id="ashjs"></div>
-    <!-- <script src="./script.js" type="module"></script> -->
     <script type="text/javascript">
       const useDatabase = true;
 
@@ -159,126 +159,35 @@
         }
       }
 
-      async function indexRoute(emit) {
-        return [
-          header(store),
-          {
-            div: [
-              {
-                button: "Configuration",
-                class: "w-full border h-10 rounded-lg mb-2",
-                onclick: () => {
-                  emit("go", "config");
-                },
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Search sentences...",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                oninput: (e) => {
-                  emit("update-search", { searchText: e.target.value });
-                },
-              },
-              {
-                div: (store.filteredData || store.data).map((sentence) =>
-                  sentenceCard(
-                    sentence.native,
-                    sentence.phonetic,
-                    sentence.english,
-                    sentence.correctAttempts,
-                    sentence.incorrectAttempts
-                  )
-                ),
-                id: "sentences",
-              },
-            ],
-            class: "p-4 mb-16",
-          },
-          {
-            div: [
-              {
-                button: "Add Sentence",
-                class: "flex-auto border h-10 rounded-lg mr-4",
-                onclick: () => {
-                  emit("go", "add");
-                },
-              },
-              {
-                button: "Practice",
-                class: "flex-auto bg-black text-white h-10 rounded-lg",
-                onclick: () => {
-                  emit("go", "practice");
-                },
-              },
-            ],
-            class: "flex fixed bottom-0 w-full bg-white p-4 border",
-          },
-        ];
+      async function indexRoute() {
+        return `
+          ${header()}
+          -div(class="p-4 mb-16")
+          --button(class="w-full border h-10 rounded-lg mb-2" onclick='go("config")')
+          ---"Configuration"
+          --input(id="search-text" type="text" placeholder="Search sentences..." class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" oninput="updateSearch")
+          --div(id="sentences")
+          { ${(store.filteredData || store.data).map((sentence) => sentenceCard(sentence.native, sentence.phonetic, sentence.english, sentence.correctAttempts, sentence.incorrectAttempts)).join("")} }
+          -div(class="flex fixed bottom-0 w-full bg-white p-4 border")
+          --button(class="flex-auto border h-10 rounded-lg mr-4" onclick='go("add")')
+          ---"Add sentence"
+          --button(class="flex-auto border h-10 rounded-lg mr-4" onclick='go("practice")')
+          ---"Practice"
+        `
       }
 
-      async function addRoute(emit) {
-        return [
-          header(store),
-          {
-            div: [
-              {
-                input: [],
-                type: "text",
-                placeholder: "English",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                oninput: (e) => {
-                  emit("render-ids", ["add-button", "auto-generate-button"]);
-                },
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Native",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                oninput: (e) => {
-                  emit("render-ids", ["add-button"]);
-                },
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Phonetic",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                oninput: (e) => {
-                  emit("render-ids", ["add-button"]);
-                },
-              },
-              {
-                button: "Auto-generate",
-                id: "auto-generate-button",
-                class:
-                  "w-full mt-2 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed",
-                ...(isAutoGenerateButtonDisabled() || store.generating
-                  ? { disabled: "" }
-                  : {}),
-                onclick: async () => {
-                  emit("auto-generate");
-                },
-              },
-              {
-                button: "Add",
-                id: "add-button",
-                class:
-                  "w-full mt-2 bg-black text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400",
-                ...(isAddButtonDisabled() ? { disabled: "" } : {}),
-                onclick: () => {
-                  emit("add");
-                },
-              },
-            ],
-            class: "p-4",
-          },
-        ];
+      async function addRoute() {
+        return `
+          ${header()}
+          -div(class="p-4")
+          --input(class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" type="text" placeholder="English" oninput="addInputUpdate")
+          --input(class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" type="text" placeholder="Native" oninput="addInputUpdate")
+          --input(class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" type="text" placeholder="Phonetic" oninput="addInputUpdate")
+          --button(id="auto-generate-button" class="w-full mt-2 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed" ${isAutoGenerateButtonDisabled() || store.generating ? `disabled="true"` : ""} onclick="autoGenerate")
+          ---"Auto-generate"
+          --button(id="add-button" class="w-full mt-2 bg-black text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400" onclick="add" ${isAddButtonDisabled() ? `disabled="true"` : ""})
+          ---"Add"
+        `
       }
 
       async function practiceRoute(emit) {
@@ -301,24 +210,56 @@
         if (store.hintProgress.status === "correct") {
           hintColor = "text-green-500";
         } else if (store.hintProgress.status === "partial") {
-          hintColor = "text-gray-500";
+          hintColor = "text-gray-400";
         } else if (store.hintProgress.status === "incorrect") {
           hintColor = "text-red-500";
         }
 
         const dontKnowHintP = [];
         if (store.hintProgress.status === "partial") {
-          dontKnowHintP.push({
-            span: store.practiceSession.current.phonetic.slice(0, store.hintProgress.to),
-            class: "text-yellow-500",
-          });
+          dontKnowHintP.push(`
+            -span(class="text-yellow-500")
+            --"${store.practiceSession.current.phonetic.slice(0, store.hintProgress.to)}"
+          `);
         }
-        dontKnowHintP.push({
-          span: store.practiceSession.current.phonetic.slice(
+        dontKnowHintP.push(`
+          -span(class="${hintColor}")
+          --"${store.practiceSession.current.phonetic.slice(
             store.hintProgress.to,
-            store.hintProgress.length
-          ),
-        });
+            store.hintProgress.length)}"
+        `);
+
+
+        return `
+          ${header(store)}
+          -div(class="p-4")
+          --p(class="text-lg font-bold mb-4")
+          ---"Translate this sentence:"
+          --p(class="text-xl")
+          ---"${store.practiceSession.current.english}"
+          --p(id="dont-know-hint" class="${`text-sm ${hintColor} font-bold ${
+                  store.dontKnowHintVisible ? "block" : "hidden"
+                }`}") 
+          {${dontKnowHintP.join("")}}
+          --input(type="text" placeholder="Type the translation..." class="w-full mt-6 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" oninput="onPracticeType")
+          --button(id="check-button" class="w-full mt-4 bg-blue-500 text-white p-3 rounded-lg shadow cursor-pointer disabled:bg-gray-400" onclick="check")
+          ---"${store.dontKnowHintVisible ? "Next" : "Check"}"
+          --button(class="w-full mt-2 bg-gray-500 text-white p-3 rounded-lg shadow cursor-pointer" onclick="dontKnow")
+          ---"I don't know"
+          --div(id="toast-container" class="fixed top-4 right-4 z-50")
+          ${store.toast.message ? `
+            ---p(class="${store.toast.class}")
+            ----"${store.toast.message}"
+          ` : ""}
+          --div(class="mt-4 flex flex-col items-center space-y-2")
+          ---p(class="text-blue-500 font-bold text-lg")
+          ----"Score for this sentence: ${score}%"
+          ---p(class="text-green-500 font-bold")
+          ----"Correct attempts: ${store.practiceSession.current.correctAttempts}"
+          ---p(class="text-red-500 font-bold")
+          ----"Incorrect attempts: ${store.practiceSession.current.incorrectAttempts}"
+        `
+
         return [
           header(store),
           {
@@ -403,78 +344,25 @@
       }
 
       async function configRoute(emit) {
-        return [
-          header(store),
-          {
-            div: [
-              store.toast.message
-                ? {
-                    p: store.toast.message,
-                    class: store.toast.class,
-                  }
-                : { div: "" },
-            ],
-            id: "toast-container",
-            class: "fixed top-4 right-4 z-50",
-          },
-          {
-            div: [
-              {
-                h1: "Language",
-                class: "text-lg font-bold mb-2",
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Language",
-                value: localStorage.getItem("language") || "",
-                class:
-                  "w-full mt-2 mb-4 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                id: "language",
-              },
-              {
-                h1: "Configure Airtable Connection",
-                class: "text-lg font-bold mb-2",
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Airtable Base ID",
-                value: localStorage.getItem("airtableBaseId") || "",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                id: "baseId",
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Airtable Table ID",
-                value: localStorage.getItem("airtableTableId") || "",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                id: "tableId",
-              },
-              {
-                input: [],
-                type: "text",
-                placeholder: "Airtable Access Token",
-                value: localStorage.getItem("airtableAccessToken") || "",
-                class:
-                  "w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]",
-                id: "accessToken",
-              },
-              {
-                button: "Save Configuration",
-                class:
-                  "w-full mt-4 bg-black text-white p-3 rounded-lg shadow cursor-pointer",
-                onclick: () => {
-                  emit("save-config");
-                },
-              },
-            ],
-            class: "p-4",
-          },
-        ];
+        return `
+          ${header(store)}
+          -div(id="toast-container" class="fixed top-4 right-4 z-50")
+          ${store.toast.message ? `
+            --p(class="${store.toast.class}")
+            ---"${store.toast.message}"
+          ` : ""}
+          -div(class="p-4")
+          --h1(class="text-lg font-bold mb-2")
+          ---"Language"
+          --input(type="text" placeholder="Language" value="${localStorage.getItem("language") || ""}" id="language" class="w-full mt-2 mb-4 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]")
+          --h1(class="text-lg font-bold mb-2")
+          ---"Configure Airtable Connection"
+          --input(type="text" placeholder="Airtable Base ID" value="${localStorage.getItem("airtableBaseId") || ""}" id="language" class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" id="baseId")
+          --input(type="text" placeholder="Airtable Table ID" value="${localStorage.getItem("airtableTableId") || ""}" id="language" class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" id="tableId")
+          --input(type="text" placeholder="Airtable Access Token" value="${localStorage.getItem("airtableAccessToken") || ""}" id="language" class="w-full mt-2 px-3 py-2.5 text-sm rounded-sm border bg-[#ffffff] text-[#444444] focus:outline-[#aaaaaa] border-[#cccccc]" id="accessToken")
+          --button(class="w-full mt-4 bg-black text-white p-3 rounded-lg shadow cursor-pointer" onclick="saveConfig")
+          ---"Save Configuration"
+        `
       }
 
       function startNewPracticeSession(store) {
@@ -500,7 +388,7 @@
         const english = document.querySelector(
           'input[placeholder="English"]'
         )?.value;
-        return !english;
+        return !Boolean(english);
       }
 
       function isAddButtonDisabled() {
@@ -517,7 +405,13 @@
         return !native || !phonetic || !english;
       }
 
-      function header(store) {
+      function header() {
+        return `
+          -div(class="bg-black text-white p-4 cursor-pointer" onclick="go-home")
+          --h2(class="text-xl font-bold")
+          ---"Phonetic"
+        `
+
         return {
           div: [{ h1: "Phonetic", class: "text-xl font-bold" }],
           class: "bg-black text-white p-4 cursor-pointer",
@@ -545,29 +439,18 @@
           : "";
 
         const totalAttempts = correctAttempts + incorrectAttempts;
-        return {
-          div: [
-            {
-              p: native,
-              class: "text-lg font-bold",
-            },
-            {
-              p: phonetic,
-              class: "text-sm text-muted-foreground",
-            },
-            {
-              p: english,
-              class: "text-sm",
-            },
-            {
-              p: scoreText,
-              class:
-                "text-blue-500 font-bold text-sm absolute bottom-3 right-4",
-            },
-          ],
-          class:
-            "mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer relative",
-        };
+
+        return `
+          -div(class="mt-4 bg-card text-card-foreground p-3 rounded-lg shadow cursor-pointer relative")
+          --p(class="text-lg font-bold")
+          ---"${native}"
+          --p(class="text-sm text-muted-foreground")
+          ---"${phonetic}"
+          --p(class="text-sm")
+          ---"${english}"
+          --p(class="text-blue-500 font-bold text-sm absolute bottom-3 right-4")
+          ---"${scoreText}"
+        `
       }
 
       /**
@@ -597,15 +480,15 @@
       }
 
       const routes = {
-        "": indexRoute,
-        add: addRoute,
-        practice: practiceRoute,
-        config: configRoute,
+        "/": indexRoute,
+        "/add": addRoute,
+        "/practice": practiceRoute,
+        "/config": configRoute,
       };
 
       const events = {
-        "update-search": (data, render) => {
-          const searchText = data.searchText;
+        "updateSearch": (data, render) => {
+          const searchText = document.getElementById("search-text").value
 
           if (!searchText) {
             store.filteredData = null;
@@ -627,7 +510,7 @@
 
           render("sentences");
         },
-        "auto-generate": async (data, render) => {
+        "autoGenerate": async (data, render) => {
           const englishInput = document.querySelector(
             'input[placeholder="English"]'
           );
@@ -647,7 +530,7 @@
                 {
                   method: "POST",
                   body: JSON.stringify({
-                    language: localStorage.getItem("language"),
+                    language: localStorage.getItem("language") || "",
                     english: englishInput.value,
                   }),
                 }
@@ -702,10 +585,20 @@
               // Handle the error (e.g., show an error message to the user)
             });
         },
-        "render-ids": (data, render) => {
+        addInputUpdate: (_, render) => {
+          render('auto-generate-button')
+          render('add-button')
+        },
+        "renderIds": (rawData, render) => {
+          const quotesReplaced = rawData.replaceAll("'", "\"")
+          const data = JSON.parse(quotesReplaced)
           data.forEach((id) => {
             render(id);
           });
+        },
+        onPracticeType: (_, render, emit) => {
+          render("check-button");
+          emit("checkHint");
         },
         check: async (data, render) => {
           store.loadingNextPracticeSentence = true;
@@ -759,7 +652,7 @@
           store.loadingNextPracticeSentence = false;
           render();
         },
-        "save-config": (data, render, emit) => {
+        "saveConfig": (data, render, emit) => {
           localStorage.setItem(
             "language",
             document.getElementById("language").value
@@ -782,13 +675,13 @@
             "success",
             render
           );
-          emit("refresh-data");
+          emit("refreshData");
         },
-        "dont-know": (data, render) => {
+        "dontKnow": (data, render) => {
           store.dontKnowHintVisible = true;
           render("dont-know-hint");
         },
-        "check-hint": (data, render) => {
+        "checkHint": (data, render) => {
           if (store.dontKnowHintVisible === false) {
             return;
           }
@@ -824,12 +717,18 @@
 
           render("dont-know-hint");
         },
-        "refresh-data": (data, render) => {
+        "refreshData": (data, render) => {
           getData(true).then((data) => {
             store.data = data;
             render();
           });
         },
+        "go-home": (data, render) => {
+          window.location.hash = "";
+          store.practiceSession.current = null;
+          store.practiceSession.practiced = [];
+          store.practiceSession.toPractice = [];
+        }
       };
 
       let store = {};
